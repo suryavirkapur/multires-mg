@@ -6,8 +6,7 @@ type Job = {
   id: string | number;
   title?: string;
   company?: string;
-  url?: string;
-  description?: string;
+  location?: string;
   similarity?: number;
 };
 
@@ -97,26 +96,14 @@ export default function ResumeMatcherPage() {
                   <div>
                     <div className="font-medium">{job.title || "(Untitled)"}</div>
                     <div className="text-sm text-gray-600">{job.company}</div>
+                    {job.location && (
+                      <div className="text-sm text-gray-500">{job.location}</div>
+                    )}
                   </div>
                   {typeof job.similarity === "number" && (
                     <div className="text-xs text-gray-500">sim {(job.similarity * 100).toFixed(1)}%</div>
                   )}
                 </div>
-                {job.url && (
-                  <a
-                    href={job.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 text-sm underline"
-                  >
-                    View Listing
-                  </a>
-                )}
-                {job.description && (
-                  <p className="mt-2 text-sm text-gray-700 line-clamp-4 whitespace-pre-line">
-                    {job.description}
-                  </p>
-                )}
               </div>
             ))}
           </div>

@@ -13,11 +13,26 @@ export function getPgPool(): Pool {
         PGPORT,
     } = process.env;
 
+    // Validate required environment variables
+    if (!PGHOST || !PGDATABASE || !PGUSER || !PGPASSWORD) {
+        const missing = [
+            !PGHOST && "PGHOST",
+            !PGDATABASE && "PGDATABASE",
+            !PGUSER && "PGUSER",
+            !PGPASSWORD && "PGPASSWORD",
+        ]
+            .filter(Boolean)
+            .join(", ");
+        throw new Error(
+            `Missing required PostgreSQL environment variables: ${missing}`,
+        );
+    }
+
     pool = new Pool({
-        host: PGHOST,
-        database: PGDATABASE,
-        user: PGUSER,
-        password: PGPASSWORD,
+        host: PGHOST.trim(),
+        database: PGDATABASE.trim(),
+        user: PGUSER.trim(),
+        password: PGPASSWORD.trim(),
         port: PGPORT ? Number(PGPORT) : 5432,
         ssl: { rejectUnauthorized: false },
         max: 10,
@@ -31,8 +46,7 @@ export type JobListing = {
     id: string | number;
     title?: string;
     company?: string;
-    url?: string;
-    description?: string;
+    location?: string;
     similarity?: number;
 };
 
@@ -63,8 +77,7 @@ export async function queryTopJobListingsByEmbedding(
       id,
       title,
       company,
-      url,
-      description,
+      location,
       (1 - ("${embeddingColumnSafe}" <=> $1::vector))::float AS similarity
     FROM ${tableSafe}
     ORDER BY "${embeddingColumnSafe}" <=> $1::vector ASC
@@ -75,8 +88,22 @@ export async function queryTopJobListingsByEmbedding(
     // Use the pg parameterization: we send text for vector cast
     const vectorText = `[${embedding.join(",")}]`;
 
-    const result = await pool.query(sql, [vectorText, limit]);
-    return result.rows as JobListing[];
+    try {
+        const result = await pool.query(sql, [vectorText, limit]);
+        return result.rows as JobListing[];
+    } catch (error) {
+        const host = process.env.PGHOST || "unknown";
+        const db = process.env.PGDATABASE || "unknown";
+        console.error("Database query error:", {
+            host,
+            database: db,
+            table,
+            error: error instanceof Error ? error.message : String(error),
+        });
+        throw new Error(
+            `Failed to query job listings: ${error instanceof Error ? error.message : String(error)}`,
+        );
+    }
 }
 
 

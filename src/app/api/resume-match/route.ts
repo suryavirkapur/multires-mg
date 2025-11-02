@@ -1,40 +1,30 @@
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { InferenceClient } from "@huggingface/inference";
 import { queryTopJobListingsByEmbedding } from "@/lib/db";
 
 async function embedWithMiniLM(text: string): Promise<number[]> {
-    const apiKey = process.env.HF_API_KEY;
-    if (!apiKey) {
+    const token = process.env.HF_TOKEN;
+    if (!token) {
         throw new Error(
-            "HF_API_KEY is not set. Please add a Hugging Face token to use embeddings.",
+            "HF_TOKEN is not set. Please add a Hugging Face token to use embeddings.",
         );
     }
 
-    const response = await fetch(
-        "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2",
-        {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ inputs: text, options: { wait_for_model: true } }),
-        },
-    );
+    const client = new InferenceClient(token);
 
-    if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`HF Inference error: ${response.status} ${err}`);
-    }
+    const output = await client.featureExtraction({
+        model: "sentence-transformers/all-MiniLM-L6-v2",
+        inputs: text,
+    });
 
-    const data = (await response.json()) as unknown;
     // Expect either a flat [384] vector or token-level [[..., 384], ...]
-    if (Array.isArray(data) && typeof data[0] === "number") {
-        return data as number[];
+    if (Array.isArray(output) && typeof output[0] === "number") {
+        return output as number[];
     }
-    if (Array.isArray(data) && Array.isArray(data[0])) {
-        const tokens = data as number[][];
+    if (Array.isArray(output) && Array.isArray(output[0])) {
+        const tokens = output as number[][];
         const dims = tokens[0]?.length ?? 0;
         const sum = new Array(dims).fill(0) as number[];
         for (const tok of tokens) {
@@ -98,8 +88,7 @@ export async function POST(request: Request) {
                     id: j.id,
                     title: j.title,
                     company: j.company,
-                    url: j.url,
-                    description: j.description,
+                    location: j.location,
                 })),
                 null,
                 2,
