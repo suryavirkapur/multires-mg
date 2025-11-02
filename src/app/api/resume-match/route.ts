@@ -49,9 +49,19 @@ async function extractTextFromRequest(req: Request): Promise<string> {
                 file.type === "application/pdf" ||
                 file.name?.toLowerCase().endsWith(".pdf")
             ) {
-                const pdfParse = (await import("pdf-parse")).default as any;
-                const parsed = await pdfParse(buffer);
-                const pdfText: string = parsed?.text || "";
+                // Use require for pdf-parse since it's marked as external in webpack
+                // This avoids bundling issues with pdfjs-dist worker files
+                const pdfParseModule = require("pdf-parse");
+                const { PDFParse } = pdfParseModule;
+                
+                if (!PDFParse || typeof PDFParse !== "function") {
+                    throw new Error("PDFParse class not found in pdf-parse module");
+                }
+                
+                // Create instance with buffer data
+                const parser = new PDFParse({ data: buffer });
+                const result = await parser.getText();
+                const pdfText: string = result?.text || "";
                 return text ? `${text}\n\n${pdfText}` : pdfText;
             }
             // Fallback: try treat as UTF-8 text
