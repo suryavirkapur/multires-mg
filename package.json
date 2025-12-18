@@ -15,7 +15,7 @@
     "@ai-sdk/react": "^2.0.59",
     "@huggingface/inference": "^4.13.0",
     "ai": "^5.0.59",
-    "next": "15.5.4",
+    "next": "15.5.9",
     "pdf-parse": "^2.4.5",
     "pg": "^8.16.3",
     "react": "19.1.0",
