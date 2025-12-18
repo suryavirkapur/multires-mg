@@ -97,7 +97,8 @@ function isPdfFile(file: File): boolean {
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
     const { extractText } = await import("unpdf");
-    const result = await extractText(buffer);
+    const data = new Uint8Array(buffer);
+    const result = await extractText(data);
     // unpdf returns text as an array of strings (one per page)
     return result?.text?.join("\n\n") || "";
 }
