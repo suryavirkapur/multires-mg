@@ -96,17 +96,10 @@ function isPdfFile(file: File): boolean {
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
-    // Lazy-import to avoid bundling issues with pdfjs-dist worker files
-    const pdfParseModule = require("pdf-parse");
-    const { PDFParse } = pdfParseModule;
-
-    if (!PDFParse || typeof PDFParse !== "function") {
-        throw new AppError("PDFParse class not found in pdf-parse module", 500);
-    }
-
-    const parser = new PDFParse({ data: buffer });
-    const result = await parser.getText();
-    return result?.text || "";
+    const { extractText } = await import("unpdf");
+    const result = await extractText(buffer);
+    // unpdf returns text as an array of strings (one per page)
+    return result?.text?.join("\n\n") || "";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
